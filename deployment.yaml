@@ -1,0 +1,81 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-log-exporter-config
+  labels:
+    app: loki-log-exporter
+data:
+  query: '{job="ingress-nginx/ingress-nginx"} |= "Requests status:" | regexp `^(?P<remote_ip>\S+) "(?P<hostname>[^"]+)" "(?P<oak>[^"]+)" "Requests status: (?P<status>\d+)"\[(?P<timestamp>[^\]]+)\] "(?P<method>\S+) (?P<path>\S+) HTTP/\d.\d"` | status != "200" | path != "/favicon.ico" | hostname != "metabased.dcm.systems" | line_format "Timestamp: {{.timestamp}}\nStatus code: {{.status}}\nRemote IP: {{.remote_ip}}\nHostname: {{.hostname}}\n{{.oak}}\nMethod: {{.method}}\nPath: {{.path}}"'
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loki-log-exporter
+  labels:
+    app: loki-log-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loki-log-exporter
+  template:
+    metadata:
+      labels:
+        app: loki-log-exporter
+    spec:
+      containers:
+      - name: loki-log-exporter
+        image: ghcr.io/zmmdv/loki-log-exporter:latest
+        imagePullPolicy: Always
+        env:
+        - name: LOKI_URL
+          value: "http://monitoring-loki-gateway:3100"  # Replace with your Loki service
+        - name: SLACK_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: loki-log-exporter-secrets
+              key: slack-token
+        - name: CHANNEL_ID
+          valueFrom:
+            secretKeyRef:
+              name: loki-log-exporter-secrets
+              key: channel-id
+        - name: VERBOSE_LOGGING
+          value: "true"
+        - name: POLL_SECONDS
+          value: "5"
+        volumeMounts:
+        - name: query-config
+          mountPath: /data
+        resources:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - ps aux | grep loki-log-exporter | grep -v grep
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - ps aux | grep loki-log-exporter | grep -v grep
+          initialDelaySeconds: 10
+          periodSeconds: 10
+      volumes:
+      - name: query-config
+        configMap:
+          name: loki-log-exporter-config
+          items:
+          - key: query
+            path: query
+---

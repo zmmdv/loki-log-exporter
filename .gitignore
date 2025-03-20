@@ -1,0 +1,26 @@
+# Binaries
+loki-log-exporter
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test and temporary files
+*.test
+*.out
+*.log
+tmp/
+
+# Environment variables
+.env
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# IDE/Editor folders
+.idea/
+.vscode/
+*.swp
+*.swo
+*~ 
