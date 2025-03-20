@@ -1,5 +1,5 @@
 {
-  "name": "ingress-path-exporter",
+  "name": "loki-log-exporter",
   "version": "1.0.0",
   "description": "Prometheus exporter for ingress-nginx which can give metrics based on logs",
   "main": "index.js",
@@ -8,15 +8,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/zmmdv/ingress-path-exporter.git"
+    "url": "git+https://github.com/zmmdv/loki-log-exporter.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/zmmdv/ingress-path-exporter/issues"
+    "url": "https://github.com/zmmdv/loki-log-exporter/issues"
   },
-  "homepage": "https://github.com/zmmdv/ingress-path-exporter#readme",
+  "homepage": "https://github.com/zmmdv/loki-log-exporter#readme",
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
