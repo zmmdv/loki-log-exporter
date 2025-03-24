@@ -350,8 +350,6 @@ func testLokiConnection(lokiURL string) error {
 		fiveSecondsAgo,
 		now)
 	
-	log.Printf("Testing Loki connectivity with: %s", testURL)
-	
 	resp, err := http.Get(testURL)
 	if err != nil {
 		return fmt.Errorf("connection test failed: %v", err)
@@ -363,7 +361,6 @@ func testLokiConnection(lokiURL string) error {
 		return fmt.Errorf("Loki returned status %d: %s", resp.StatusCode, string(body))
 	}
 	
-	log.Printf("Successfully connected to Loki server")
 	return nil
 }
 
