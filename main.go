@@ -466,11 +466,18 @@ func main() {
 	connectionTicker := time.NewTicker(1 * time.Second)
 	defer connectionTicker.Stop()
 
+	// Create a ticker for reporting connection stats (every minute)
+	reportTicker := time.NewTicker(1 * time.Minute)
+	defer reportTicker.Stop()
+
 	// Failed attempts counter
 	failedAttempts := 0
 	
 	// Max allowed consecutive failed attempts
 	maxFailedAttempts := 3
+
+	// Connection success counter
+	successfulConnections := 0
 
 	// Cleanup old entries from tracking map every hour
 	cleanupTicker := time.NewTicker(1 * time.Hour)
@@ -481,6 +488,13 @@ func main() {
 		// Cleanup old entries from the tracking map
 		case <-cleanupTicker.C:
 			cleanupSentMessages()
+			
+		// Report connection stats every minute
+		case <-reportTicker.C:
+			if successfulConnections > 0 {
+				log.Printf("Connection stats: %d successful connections in the last minute", successfulConnections)
+				successfulConnections = 0
+			}
 			
 		// Check connection to Loki every second
 		case <-connectionTicker.C:
@@ -498,6 +512,7 @@ func main() {
 					log.Printf("Loki connection restored after %d failed attempts", failedAttempts)
 					failedAttempts = 0
 				}
+				successfulConnections++
 			}
 			
 		// Normal query polling operation
