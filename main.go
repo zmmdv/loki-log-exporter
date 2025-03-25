@@ -139,8 +139,13 @@ func queryLoki(config *Config) (*LokiResponse, error) {
 		log.Printf("Time window: last hour (%d seconds)", now - oneHourAgo)
 	}
 
+	// Create a client with timeout
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
 	// Send the HTTP request
-	resp, err := http.Get(queryURL)
+	resp, err := client.Get(queryURL)
 	if err != nil {
 		return nil, fmt.Errorf("error querying Loki: %v", err)
 	}
@@ -350,7 +355,12 @@ func testLokiConnection(lokiURL string) error {
 		fiveSecondsAgo,
 		now)
 	
-	resp, err := http.Get(testURL)
+	// Create a client with timeout
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+	}
+	
+	resp, err := client.Get(testURL)
 	if err != nil {
 		return fmt.Errorf("connection test failed: %v", err)
 	}
@@ -467,6 +477,10 @@ func main() {
 	reportTicker := time.NewTicker(1 * time.Minute)
 	defer reportTicker.Stop()
 
+	// Create a watchdog ticker (every 5 minutes)
+	watchdogTicker := time.NewTicker(5 * time.Minute)
+	defer watchdogTicker.Stop()
+
 	// Failed attempts counter
 	failedAttempts := 0
 	
@@ -475,6 +489,9 @@ func main() {
 
 	// Connection success counter
 	successfulConnections := 0
+
+	// Last activity timestamp
+	lastActivity := time.Now()
 
 	// Cleanup old entries from tracking map every hour
 	cleanupTicker := time.NewTicker(1 * time.Hour)
@@ -491,6 +508,16 @@ func main() {
 			if successfulConnections > 0 {
 				log.Printf("Connection stats: %d successful connections in the last minute", successfulConnections)
 				successfulConnections = 0
+			}
+			
+		// Watchdog check
+		case <-watchdogTicker.C:
+			if time.Since(lastActivity) > 10*time.Minute {
+				log.Printf("WARNING: No activity detected for more than 10 minutes. Restarting main loop...")
+				// Reset counters and continue
+				failedAttempts = 0
+				successfulConnections = 0
+				lastActivity = time.Now()
 			}
 			
 		// Check connection to Loki every second
@@ -510,6 +537,7 @@ func main() {
 					failedAttempts = 0
 				}
 				successfulConnections++
+				lastActivity = time.Now()
 			}
 			
 		// Normal query polling operation
@@ -521,6 +549,9 @@ func main() {
 				log.Printf("Error querying Loki: %v", err)
 				continue
 			}
+
+			// Update last activity timestamp
+			lastActivity = time.Now()
 
 			// Process results
 			resultsFound := 0
